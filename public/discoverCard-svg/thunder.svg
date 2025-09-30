@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #5d43ef;
+        stroke-width: 1px;
+        fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path id="Ellipse_1_copy" data-name="Ellipse 1 copy" class="cls-1" d="M15.84,1a15.121,15.121,0,0,1,15.24,15A15.121,15.121,0,0,1,15.84,31,15.121,15.121,0,0,1,.6,16,15.121,15.121,0,0,1,15.84,1Z"/>
+  <image id="thunder_1_" data-name="thunder (1)" x="11" y="6" width="10" height="18" xlink:href="data:img/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAASCAYAAABit09LAAAA10lEQVQokX2RvwtBURTHPw8p/4CUUZkNymiw2JUe5U8gIyabUWG0KYMsMstiMBnFZDGzGCx+dOveOh3P+y7ne+738+47p+s1Snf+aA/MgZGJI3+gJlAADu4gCEzYWx7ALgyc2rqWhxosAnXrt2HgwtY3MJNBTPgBkLT+CqRE/nEmA3TERwa6BP16qUaIq/5pwB6QI1y+AbsKeal+A6zMjHnAE0EZGIq+6rY+qxt84c1T3uQyUjXbnICJ3topDWRtU5FB0BMajYFjGNi3taXn0WAUaP9MDXwB9XofgOLnusIAAAAASUVORK5CYII="/>
+</svg>

@@ -1,0 +1,15 @@
+{
+  "short_name": "NEFTIT",
+  "name": "NEFTIT - Complete Quests, Earn & Upgrade NFTs",
+  "icons": [
+    {
+      "src": "icons/NEFTIT FAVICON.png",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0b0a14",
+  "background_color": "#0b0a14"
+} 

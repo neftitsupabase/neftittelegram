@@ -25,7 +25,15 @@ export class ImprovedOnchainStakingService {
    */
   private async initializeWeb3(): Promise<void> {
     try {
-      // Initialize read-only Web3 instance for read operations using direct RPC
+      // Use MetaMask provider for transactions
+      if (!window.ethereum) {
+        throw new Error('MetaMask not available');
+      }
+      
+      // Initialize Web3 with MetaMask provider for transactions
+      this.web3 = new Web3(window.ethereum);
+      
+      // Initialize separate Web3 instance for read operations using direct RPC
       const rpcUrls = [
         NETWORK_CONFIG.RPC_URL,
         'https://rpc-amoy.polygon.technology',
@@ -34,48 +42,29 @@ export class ImprovedOnchainStakingService {
       ];
       this.readOnlyWeb3 = new Web3(rpcUrls[0]);
       
-      // Initialize contracts for read-only operations
-      this.initializeReadOnlyContracts();
+      // Get user account from MetaMask
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      this.userAccount = accounts[0];
       
-      // Check if MetaMask is available for transactions
-      if (window.ethereum) {
-        // Initialize Web3 with MetaMask provider for transactions
-        this.web3 = new Web3(window.ethereum);
-        
-        // Get user account from MetaMask (if connected)
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          this.userAccount = accounts[0] || null;
-        } catch (error) {
-          console.log('No MetaMask account connected, using read-only mode');
-          this.userAccount = null;
-        }
-      } else {
-        console.log('MetaMask not available, using read-only mode');
-        this.userAccount = null;
+      if (!this.userAccount) {
+        throw new Error('No account connected');
       }
       
-      if (this.userAccount) {
-        console.log('👤 Connected account:', this.userAccount.toLowerCase());
-        
-        // Verify chain ID using MetaMask
-        const chainId = await this.web3!.eth.getChainId();
-        console.log('Connected to chain ID:', chainId);
-        
-        if (Number(chainId) !== NETWORK_CONFIG.CHAIN_ID) {
-          throw new Error(`Wrong network. Expected ${NETWORK_CONFIG.CHAIN_ID}, got ${chainId}`);
-        }
-        
-        // Initialize contracts for transactions
-        this.initializeContracts();
+      console.log('👤 Connected account:', this.userAccount.toLowerCase());
+      
+      // Verify chain ID using MetaMask
+      const chainId = await this.web3.eth.getChainId();
+      console.log('Connected to chain ID:', chainId);
+      
+      if (Number(chainId) !== NETWORK_CONFIG.CHAIN_ID) {
+        throw new Error(`Wrong network. Expected ${NETWORK_CONFIG.CHAIN_ID}, got ${chainId}`);
       }
       
       console.log('✅ Hybrid Web3 setup: MetaMask for transactions, direct RPC for reads');
       
     } catch (error) {
       console.error('❌ Failed to initialize Web3:', error);
-      // Don't throw error, just log it and continue in read-only mode
-      console.log('Continuing in read-only mode...');
+      throw error;
     }
   }
 

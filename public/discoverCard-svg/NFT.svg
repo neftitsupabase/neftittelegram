@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #5d43ef;
+        stroke-width: 1px;
+        fill-rule: evenodd;
+      }
+
+      .cls-2 {
+        font-size: 17.856px;
+        fill: #5d43ef;
+        font-family: Poppins;
+        font-weight: 700;
+      }
+    </style>
+  </defs>
+  <path id="Ellipse_1_copy_2" data-name="Ellipse 1 copy 2" class="cls-1" d="M15.886,1a15.121,15.121,0,0,1,15.24,15,15.121,15.121,0,0,1-15.24,15A15.121,15.121,0,0,1,.646,16,15.121,15.121,0,0,1,15.886,1Z"/>
+  <text id="NFT" class="cls-2" transform="translate(6.558 24.572)">NFT</text>
+</svg>

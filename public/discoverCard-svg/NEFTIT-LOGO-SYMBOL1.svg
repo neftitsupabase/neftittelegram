@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="31" height="30" viewBox="0 0 31 30">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke: #5d43ef;
+        stroke-width: 1px;
+        filter: url(#filter);
+      }
+    </style>
+    <filter id="filter" x="0" y="0" width="30.469" height="30" filterUnits="userSpaceOnUse">
+      <feImage preserveAspectRatio="none" x="0" y="0" width="30.469" height="30" result="image" xlink:href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMzAuNDY5IiBoZWlnaHQ9IjMwIiB2aWV3Qm94PSIwIDAgMzAuNDY5IDMwIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudCk7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudCIgeDE9IjE1LjIzNCIgeTE9IjMwIiB4Mj0iMTUuMjM0IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzVkNDNlZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNmZmYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IGNsYXNzPSJjbHMtMSIgd2lkdGg9IjMwLjQ2OSIgaGVpZ2h0PSIzMCIvPgo8L3N2Zz4K"/>
+      <feComposite result="composite" operator="in" in2="SourceGraphic"/>
+      <feBlend result="blend" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+  <g style="fill: ; filter: url(#filter)">
+    <circle id="circle" class="cls-1" cx="15.234" cy="15" r="15.234" style="stroke: inherit; filter: none; fill: inherit"/>
+  </g>
+  <use xlink:href="#circle" style="stroke: #5d43ef; filter: none; fill: none"/>
+  <image id="NEFTIT_LOGO_SYMBOL" data-name="NEFTIT LOGO SYMBOL" x="8" y="6" width="17" height="19" xlink:href="data:img/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAATCAYAAAB2pebxAAABeUlEQVQ4jY2UTShEURTHf8MslGKKZEXJ2GvYKBsrkg0rsRApKx+lWJOFpWZnZacsZCE7Hyk1o2woG0MJZTQbdsIc3Tqvjjd33nPqdt/5+p97/u/cmxARYiQNzADNwCWwXRHuQCLWgFRKTkRqbU4UQJ2IfCvEnoisiMib6hv/BTnShLyxZdT2aGNrqtAxDgzp97Cx/wQsxHHSaFiYDvlu1b4e186ZBp6G7GtqL8URO6uBZRFpMPa0OV1ruLCdkxagCHwBGeDGdH0PdACbwD4wCKSAT+A5CUwAncCiJrwA3cCYEtivACfAAZDXuFXgFSi5k4wAbcAdsKRVnMwDZa1W0JNdAe3qy/r+Tr2IfGjfPR7Cd9WXC/usUtCgrAdg0hDbVA2kTwOePAApAzDlm+5gYrt0P/dM76Hux8COd74VrVcrFUUkaaosqN1dRMeZ955Z5VoTHDfLIrJl2hiNejKs4ibxwfN+/Ln2vhV+2RLAnE7su07nhZeHQIBfXgzL3yq2iLQAAAAASUVORK5CYII="/>
+</svg>
