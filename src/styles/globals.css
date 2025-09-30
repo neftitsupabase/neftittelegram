@@ -1,0 +1,248 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
+@import './fonts.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 100%; /* white */
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 240 6% 4%; /* #0B0A14 */
+    --primary-foreground: 252 74% 62%; /* #5D43EF */
+    --secondary: 346 100% 59%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-text-primary font-sora;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    background-color: #0b0a14 !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sora font-bold tracking-tight text-text-primary;
+  }
+  
+  p {
+    @apply text-text-primary;
+  }
+  
+  input, textarea, select, button {
+    @apply font-sora text-text-primary;
+  }
+  
+  a {
+    @apply text-text-primary hover:text-primary transition-colors;
+  }
+  
+  label {
+    @apply text-text-secondary;
+  }
+  
+  small, .text-small {
+    @apply text-text-secondary;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-background-lighter;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border hover:bg-border-hover rounded-full transition-colors;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@layer components {
+  /* Typography Consistency */
+  .heading-1 {
+    @apply text-3xl sm:text-4xl font-sora font-bold tracking-tight text-text-primary;
+  }
+  
+  .heading-2 {
+    @apply text-2xl sm:text-3xl font-sora font-bold tracking-tight text-text-primary;
+  }
+  
+  .heading-3 {
+    @apply text-xl sm:text-2xl font-sora font-bold tracking-tight text-text-primary;
+  }
+
+  .paragraph {
+    @apply text-base font-sora leading-relaxed text-text-primary;
+  }
+  
+  .paragraph-secondary {
+    @apply text-base font-sora leading-relaxed text-text-secondary;
+  }
+  
+  .paragraph-tertiary {
+    @apply text-base font-sora leading-relaxed text-text-tertiary;
+  }
+  
+  /* Text Color Classes */
+  .text-primary-color {
+    @apply text-text-primary;
+  }
+  
+  .text-secondary-color {
+    @apply text-text-secondary;
+  }
+  
+  .text-tertiary-color {
+    @apply text-text-tertiary;
+  }
+  
+  /* Glass Card Effect */
+  .glass-card {
+    @apply bg-[#121021]/90 border-[#292460] backdrop-blur-xl;
+    @apply transition-all duration-300;
+    @apply hover:bg-[#121021]/90 hover:shadow-lg hover:border-[#292460] hover:shadow-[#5d43ef]/20;
+    @apply rounded-xl;
+  }
+
+  /* Remove colorful gradient text by default and make it opt-in */
+  .gradient-text {
+    @apply text-text-primary;
+  }
+  
+  /* Only apply gradient when explicitly needed */
+  .gradient-text-enabled {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary-light to-primary;
+  }
+
+  /* Gradient Border */
+  .gradient-border {
+    position: relative;
+    border-radius: inherit;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(to right, var(--color-primary), var(--color-primary-light));
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Hover Card Effect */
+  .hover-card {
+    @apply transition-all duration-300;
+    @apply hover:-translate-y-2 hover:shadow-xl;
+  }
+
+  /* Loading Skeleton */
+  .skeleton {
+    @apply animate-pulse bg-white/5 rounded-lg;
+  }
+
+  /* Sidebar Background Utility */
+  .sidebar-bg {
+    background: linear-gradient(135deg, rgba(11, 10, 20, 0.7) 0%, rgba(93, 67, 239, 0.15) 50%, rgba(11, 10, 20, 0.8) 100%);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(93, 67, 239, 0.3);
+    box-shadow: 
+      0 25px 45px rgba(93, 67, 239, 0.2),
+      0 8px 25px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    position: relative;
+  }
+  
+  .sidebar-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(93, 67, 239, 0.1) 50%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+/* Matrix Rain Effect */
+.matrix-rain {
+  @apply fixed inset-0 pointer-events-none opacity-10;
+  background: linear-gradient(180deg, 
+    rgba(54, 249, 246, 0.2) 0%,
+    rgba(54, 249, 246, 0.1) 50%,
+    rgba(54, 249, 246, 0) 100%
+  );
+  background-size: 100% 100%;
+  animation: matrix-rain 20s linear infinite;
+} 

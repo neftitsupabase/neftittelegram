@@ -1,0 +1,24 @@
+# How NEFTIT Avoids Sybil Attacks
+
+NEFTIT uses a combination of **on-chain** and **off-chain** verification tools, as well as behavior analysis and manual reviews, to prevent Sybil and bot-based abuse.
+
+**Anti-Sybil Strategies:**
+
+1. **Wallet Behavior Analysis**
+   * Track wallet age, transaction history, and interaction patterns
+   * Penalize wallets with zero transaction depth or activity spikes
+2. **Social Graph Verification**
+   * Check if a wallet is connected to verified Twitter or Discord accounts
+   * Look for natural social connections and past history of interaction
+3. **IP Rate Limiting & Geo Analysis**
+   * Limit number of wallet signups from a single IP or geolocation
+   * Flag suspicious behavior such as VPNs or mass wallet creation
+4. **Device Fingerprinting**
+   * Identify users using the same browser/device to create multiple accounts
+5. **Code-Based Access**
+   * Special campaign codes and invite-only access prevent mass abuse
+   * Codes are redeemable once per verified identity
+6. **Referral System Limits**
+   * Prevent users from referring themselves via dummy accounts
+   * Use wallet linkage and browser storage checks
+

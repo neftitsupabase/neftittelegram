@@ -1,0 +1,37 @@
+{
+  "name": "twitter-verification-service",
+  "version": "2.0.0",
+  "description": "Robust Twitter verification service with perfect retweet and X post detection",
+  "main": "twitter-verification-service-robust.js",
+  "scripts": {
+    "start": "node twitter-verification-service-robust.js",
+    "start:robust": "node twitter-verification-service-robust.js",
+    "dev": "nodemon twitter-verification-service-robust.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "twitter",
+    "verification",
+    "retweet",
+    "x-post",
+    "puppeteer",
+    "express",
+    "api"
+  ],
+  "author": "NEFTIT Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

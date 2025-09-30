@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "ethers": "^6.8.1",
+    "@solana/web3.js": "^1.87.6",
+    "@aptos-labs/ts-sdk": "^0.0.7",
+    "@web3modal/ethereum": "^2.4.1",
+    "@web3modal/react": "^2.4.1",
+    "ipfs-http-client": "^60.0.1",
+    "web3.storage": "^4.5.5",
+    "viem": "^1.19.9",
+    "wagmi": "^1.4.7"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.2"
+  }
+} 

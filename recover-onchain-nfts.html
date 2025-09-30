@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recover Onchain Staked NFTs</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .nft-list {
+            margin-top: 15px;
+        }
+        .nft-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Recover Onchain Staked NFTs</h1>
+        
+        <div class="form-group">
+            <label for="walletAddress">Your Wallet Address:</label>
+            <input type="text" id="walletAddress" placeholder="0x..." value="0xE7c8B6180286abDB598F0F818F5Fd5b4c42b9ac4">
+        </div>
+        
+        <button class="btn" onclick="checkOnchainNFTs()" id="checkBtn">
+            🔍 Check Onchain Staked NFTs
+        </button>
+        
+        <button class="btn" onclick="recoverNFTs()" id="recoverBtn">
+            🔄 Recover & Sync to Database
+        </button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script type="module">
+        // Import the service (adjust path as needed)
+        import improvedOnchainStakingService from './src/services/ImprovedOnchainStakingService.js';
+
+        window.checkOnchainNFTs = async function() {
+            const walletAddress = document.getElementById('walletAddress').value.trim();
+            const resultDiv = document.getElementById('result');
+            const btn = document.getElementById('checkBtn');
+            
+            if (!walletAddress) {
+                showResult('error', 'Please enter a wallet address');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '🔄 Checking...';
+            
+            try {
+                // Check if onchain staking is available
+                const isAvailable = await improvedOnchainStakingService.isOnChainAvailable();
+                if (!isAvailable) {
+                    throw new Error('Onchain staking not available - check network connection');
+                }
+                
+                // Get staked NFTs from blockchain
+                const stakeInfo = await improvedOnchainStakingService.getStakeInfo(walletAddress);
+                
+                if (stakeInfo.stakedNFTs.length === 0) {
+                    showResult('success', 'No onchain staked NFTs found for this wallet');
+                    return;
+                }
+                
+                // Get detailed NFT information
+                const detailedNFTs = await improvedOnchainStakingService.getDetailedOnchainStakedNFTs(walletAddress);
+                
+                let html = `<strong>Found ${stakeInfo.stakedNFTs.length} onchain staked NFTs:</strong>`;
+                html += `<div>💰 Pending Rewards: ${stakeInfo.pendingRewards} NEFT</div>`;
+                html += '<div class="nft-list">';
+                
+                detailedNFTs.forEach(nft => {
+                    html += `
+                        <div class="nft-item">
+                            <strong>${nft.name}</strong><br>
+                            Token ID: ${nft.tokenId}<br>
+                            Rarity: ${nft.rarity}<br>
+                            Daily Reward: ${nft.dailyReward} NEFT<br>
+                            Staked At: ${new Date(nft.stakedAt).toLocaleString()}
+                            ${nft.error ? `<br><span style="color: orange;">⚠️ ${nft.error}</span>` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                showResult('success', html);
+                
+            } catch (error) {
+                console.error('Error checking onchain NFTs:', error);
+                showResult('error', `Failed to check onchain NFTs: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Check Onchain Staked NFTs';
+            }
+        };
+
+        window.recoverNFTs = async function() {
+            const walletAddress = document.getElementById('walletAddress').value.trim();
+            const resultDiv = document.getElementById('result');
+            const btn = document.getElementById('recoverBtn');
+            
+            if (!walletAddress) {
+                showResult('error', 'Please enter a wallet address');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '🔄 Recovering...';
+            
+            try {
+                // Check if onchain staking is available
+                const isAvailable = await improvedOnchainStakingService.isOnChainAvailable();
+                if (!isAvailable) {
+                    throw new Error('Onchain staking not available - check network connection');
+                }
+                
+                // Recover onchain staked NFTs
+                const recovery = await improvedOnchainStakingService.recoverOnchainStakedNFTs(walletAddress);
+                
+                if (!recovery.success) {
+                    throw new Error(recovery.error || 'Recovery failed');
+                }
+                
+                let message = `Recovery completed successfully!<br>`;
+                message += `🔄 Recovered: ${recovery.recovered} NFTs<br>`;
+                
+                if (recovery.recovered > 0) {
+                    message += `<br>✅ Your onchain staked NFTs have been synced to the database and should now appear in the staking page.`;
+                } else {
+                    message += `<br>ℹ️ All onchain staked NFTs were already synced to the database.`;
+                }
+                
+                showResult('success', message);
+                
+            } catch (error) {
+                console.error('Error recovering NFTs:', error);
+                showResult('error', `Recovery failed: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Recover & Sync to Database';
+            }
+        };
+
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = message;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

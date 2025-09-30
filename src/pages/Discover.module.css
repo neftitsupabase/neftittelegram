@@ -1,0 +1,53 @@
+.discoverGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 300px);
+  gap: 40px;
+}
+
+.cardImageContainer {
+  width: 100%;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  position: relative;
+  background: #181a20;
+  border-radius: 12px 12px 0 0;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s;
+}
+
+.cardImageContainer:hover .cardImage {
+  transform: scale(1.05);
+}
+
+.badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  background: #38b2ac;
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(56,178,172,0.15);
+}
+
+.badge.endingSoon {
+  background: #f56565;
+}
+
+.card {
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
+  background: #181a20;
+  display: flex;
+  flex-direction: column;
+}

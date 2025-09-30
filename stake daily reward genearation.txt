@@ -1,0 +1,2 @@
+# Set up cron job once, runs forever automatically
+0 0 * * * psql -d database -c "SELECT generate_daily_staking_rewards();"

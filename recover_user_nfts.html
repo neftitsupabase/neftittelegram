@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recover User NFTs</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        input, button { display: block; margin-bottom: 10px; padding: 8px; }
+        .nft-item { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Recover User NFTs from Pinata</h1>
+    <input type="text" id="userWallet" placeholder="Your Wallet Address" value="0x5BEdd9F1415B8Eb1F669AAc68B0Fd9106b265071">
+    <input type="text" id="ipfsHash" placeholder="Your IPFS Hash (if known)">
+    <button onclick="searchPinataForUserData()">Search Pinata for My NFTs</button>
+    <button onclick="recoverFromKnownHash()">Recover from Known Hash</button>
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://heacehinqihfexxrbwdr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlYWNlaGlucWloZmV4eHJid2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMTMyMTMsImV4cCI6MjA2Njc4OTIxM30.9jBZljJ_uS1M2gX9u3Ao_7amPwGtI9myTrdK7cBK7-4';
+        const PINATA_API_KEY = '8ba2dcf332749804d589';
+        const PINATA_SECRET_KEY = '3d413242a71d1c07cd1a67c6b0956738ccea600c80398e83a4a68b1c20b72ac5';
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/';
+
+        async function searchPinataForUserData() {
+            const userWallet = document.getElementById('userWallet').value;
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            if (!userWallet) {
+                statusDiv.innerHTML = '<div class="error">Please enter your wallet address</div>';
+                return;
+            }
+
+            statusDiv.textContent = 'Searching Pinata for your NFT data...';
+            resultsDiv.innerHTML = '';
+
+            try {
+                // Search Pinata for files related to this wallet
+                const response = await fetch('https://api.pinata.cloud/data/pinList', {
+                    method: 'GET',
+                    headers: {
+                        'pinata_api_key': PINATA_API_KEY,
+                        'pinata_secret_api_key': PINATA_SECRET_KEY
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Pinata search failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const userFiles = data.rows.filter(file => 
+                    file.metadata && 
+                    (file.metadata.name.includes(userWallet) || 
+                     (file.metadata.keyvalues && file.metadata.keyvalues.wallet === userWallet))
+                );
+
+                if (userFiles.length === 0) {
+                    statusDiv.innerHTML = '<div class="error">No files found for your wallet in Pinata</div>';
+                    return;
+                }
+
+                statusDiv.innerHTML = '<div class="success">Found ' + userFiles.length + ' files in Pinata!</div>';
+                
+                for (const file of userFiles) {
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = 'nft-item';
+                    fileDiv.innerHTML = `
+                        <h3>File: ${file.metadata.name}</h3>
+                        <p><strong>IPFS Hash:</strong> ${file.ipfs_pin_hash}</p>
+                        <p><strong>Date:</strong> ${file.date_pinned}</p>
+                        <button onclick="recoverFromHash('${file.ipfs_pin_hash}', '${userWallet}')">Recover This File</button>
+                        <button onclick="viewFileContent('${file.ipfs_pin_hash}')">View Content</button>
+                    `;
+                    resultsDiv.appendChild(fileDiv);
+                }
+
+            } catch (error) {
+                console.error('Error searching Pinata:', error);
+                statusDiv.innerHTML = '<div class="error">Error searching Pinata: ' + error.message + '</div>';
+            }
+        }
+
+        async function viewFileContent(ipfsHash) {
+            try {
+                const response = await fetch(`${IPFS_GATEWAY}${ipfsHash}`);
+                const content = await response.json();
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = `
+                    <h4>Content Preview:</h4>
+                    <pre>${JSON.stringify(content, null, 2)}</pre>
+                `;
+                
+                // Find the parent nft-item and append content
+                event.target.parentElement.appendChild(contentDiv);
+            } catch (error) {
+                alert('Error viewing content: ' + error.message);
+            }
+        }
+
+        async function recoverFromHash(ipfsHash, walletAddress) {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                statusDiv.textContent = 'Recovering NFT data...';
+                
+                // Save the IPFS hash back to Supabase
+                const { error } = await supabaseClient
+                    .from('user_ipfs_mappings')
+                    .upsert({
+                        wallet_address: walletAddress,
+                        ipfs_hash: ipfsHash,
+                        last_updated: new Date().toISOString()
+                    }, {
+                        onConflict: 'wallet_address'
+                    });
+
+                if (error) {
+                    throw error;
+                }
+
+                statusDiv.innerHTML = '<div class="success">Successfully recovered NFT data! Your NFTs should now be visible in the system.</div>';
+                
+            } catch (error) {
+                console.error('Error recovering data:', error);
+                statusDiv.innerHTML = '<div class="error">Error recovering data: ' + error.message + '</div>';
+            }
+        }
+
+        async function recoverFromKnownHash() {
+            const userWallet = document.getElementById('userWallet').value;
+            const ipfsHash = document.getElementById('ipfsHash').value;
+            
+            if (!userWallet || !ipfsHash) {
+                document.getElementById('status').innerHTML = '<div class="error">Please enter both wallet address and IPFS hash</div>';
+                return;
+            }
+
+            await recoverFromHash(ipfsHash, userWallet);
+        }
+    </script>
+</body>
+</html>

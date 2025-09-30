@@ -1,0 +1,29 @@
+# Off-Chain Burn System (Planning)
+
+NEFTIT is actively exploring an off-chain NFT burn system to reduce gas fees and optimize user experience during campaign-based reward flows. This system is currently in the **planning phase**, and would allow users to burn unclaimed NFTs without paying any transaction fees.
+
+### Concept Overview
+
+When a user completes a campaign, they receive an NFT reward. These NFTs are pre-minted and stored off-chain in decentralized storage (e.g., IPFS), associated with the user’s account but not yet minted on-chain.
+
+Users will then be given two options:
+
+* **Claim NFT:** The NFT is minted on-chain and sent to the user’s wallet. This will require a gas fee, as it becomes a real blockchain asset.
+* **Burn NFT (off-chain):** If the user chooses to burn the NFT without claiming it, the system will delete or invalidate the NFT metadata from storage and mark the NFT as burned in the NEFTIT database.
+
+### Key Benefits (If Implemented)
+
+* **Zero gas cost for burn actions**
+* **Smooth user experience during bulk campaigns**
+* **Reduces on-chain congestion and unnecessary minting**
+* **Supports scalable burn-to-upgrade mechanics**
+
+### Considerations
+
+* Burned NFTs will be permanently removed from user claim history
+* Users cannot burn already claimed (on-chain) NFTs this way
+* A transparent burn log or receipt system may be introduced for user trust
+* Users can not sell or buy unclaimed NFTs
+
+This system is under technical evaluation and subject to further community and dev team input.
+

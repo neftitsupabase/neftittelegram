@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEFTIT - Login Debug Tool</title>
+  <!-- Import Supabase directly with globalThis -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8f9fa;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    button {
+      background-color: #4F46E5;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #4338CA;
+    }
+    pre {
+      background-color: #f1f1f1;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .error {
+      background-color: #fee2e2;
+      color: #dc2626;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>NEFTIT Login Debug Tool</h1>
+  
+  <div class="card">
+    <h2>Supabase Connection</h2>
+    <p>Enter your Supabase credentials to check the database:</p>
+    <div>
+      <label for="supabaseUrl">Supabase URL:</label>
+      <input type="text" id="supabaseUrl" style="width: 100%; margin: 5px 0; padding: 8px;" placeholder="https://rrwpbjxfhydpypdwyavt.supabase.co">
+    </div>
+    <div>
+      <label for="supabaseKey">Supabase Anon Key:</label>
+      <input type="text" id="supabaseKey" style="width: 100%; margin: 5px 0; padding: 8px;" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+    </div>
+    <div style="margin-top: 15px;">
+      <button onclick="checkConnection()">Test Connection</button>
+    </div>
+    <div id="connectionResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Check Users Table</h2>
+    <button onclick="checkUsers()">View All Users</button>
+    <div id="usersResult" style="margin-top: 15px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Check User Data Table</h2>
+    <button onclick="checkUserData()">View All User Data</button>
+    <div id="userDataResult" style="margin-top: 15px;"></div>
+  </div>
+
+  <script>
+    let supabaseClient;
+
+    function initSupabase() {
+      const supabaseUrl = document.getElementById('supabaseUrl').value;
+      const supabaseKey = document.getElementById('supabaseKey').value;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        document.getElementById('connectionResult').innerHTML = '<div class="error">Please enter Supabase URL and anon key</div>';
+        return null;
+      }
+
+      try {
+        // Create Supabase client using the global supabase object
+        return supabase.createClient(supabaseUrl, supabaseKey);
+      } catch (error) {
+        console.error("Error creating Supabase client:", error);
+        document.getElementById('connectionResult').innerHTML = 
+          `<div class="error">Error initializing Supabase: ${error.message}</div>`;
+        return null;
+      }
+    }
+
+    async function checkConnection() {
+      const resultDiv = document.getElementById('connectionResult');
+      resultDiv.innerHTML = 'Testing connection...';
+      
+      try {
+        supabaseClient = initSupabase();
+        if (!supabaseClient) return;
+        
+        const { data, error } = await supabaseClient.from('users').select('count').limit(1);
+        
+        if (error) throw error;
+        
+        resultDiv.innerHTML = '<div style="color: green; margin-top: 10px;">✅ Connection successful!</div>';
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ Connection failed: ${error.message}</div>`;
+        console.error("Connection error details:", error);
+      }
+    }
+
+    async function checkUsers() {
+      const resultDiv = document.getElementById('usersResult');
+      resultDiv.innerHTML = 'Loading users...';
+      
+      try {
+        supabaseClient = initSupabase();
+        if (!supabaseClient) return;
+        
+        const { data, error } = await supabaseClient.from('users').select('*');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          resultDiv.innerHTML = `<p>Found ${data.length} user(s):</p>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>`;
+        } else {
+          resultDiv.innerHTML = '<p>No users found in the database.</p>';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">Error fetching users: ${error.message}</div>`;
+        console.error("Error details:", error);
+      }
+    }
+
+    async function checkUserData() {
+      const resultDiv = document.getElementById('userDataResult');
+      resultDiv.innerHTML = 'Loading user data...';
+      
+      try {
+        supabaseClient = initSupabase();
+        if (!supabaseClient) return;
+        
+        const { data, error } = await supabaseClient.from('user_data').select('*');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          resultDiv.innerHTML = `<p>Found ${data.length} user data record(s):</p>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>`;
+        } else {
+          resultDiv.innerHTML = '<p>No user data found in the database.</p>';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">Error fetching user data: ${error.message}</div>`;
+        console.error("Error details:", error);
+      }
+    }
+  </script>
+</body>
+</html> 

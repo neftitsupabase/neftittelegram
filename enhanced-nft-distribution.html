@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced NFT Distribution</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        input, button { display: block; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Enhanced NFT Distribution Tool</h1>
+    <input type="text" id="walletAddress" placeholder="User Wallet Address">
+    <select id="raritySelect">
+        <option value="common">Common</option>
+        <option value="rare">Rare</option>
+        <option value="legendary">Legendary</option>
+        <option value="platinum">Platinum</option>
+        <option value="silver">Silver</option>
+        <option value="gold">Gold</option>
+    </select>
+    <button onclick="executeDistribution()">Distribute Unique NFT</button>
+    <button onclick="checkUserNFTs()">Check User NFTs</button>
+    <button onclick="checkCIDStats()">Check CID Availability</button>
+    <button onclick="testUniqueness()">Test Uniqueness (3 Users)</button>
+    <div id="status"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://heacehinqihfexxrbwdr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlYWNlaGlucWloZmV4eHJid2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMTMyMTMsImV4cCI6MjA2Njc4OTIxM30.9jBZljJ_uS1M2gX9u3Ao_7amPwGtI9myTrdK7cBK7-4';
+        const PINATA_API_KEY = 'c7b965f39fffe52506b8';
+        const PINATA_SECRET_KEY = '55e1b40cb26e3c7dcc3925626eb2af139edcb5fda718467e6f60ecec18fc2332';
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: false
+            }
+        });
+
+        const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/';
+        const MAX_NFTS_PER_PAGE = 100;
+
+        async function getIPFSHash(walletAddress) {
+            const { data, error } = await supabaseClient
+                .from('user_ipfs_mappings') // Corrected table name
+                .select('ipfs_hash')
+                .eq('wallet_address', walletAddress)
+                .single();
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+                throw new Error('Error fetching IPFS hash: ' + error.message);
+            }
+            return data ? data.ipfs_hash : null;
+        }
+
+        async function setIPFSHash(walletAddress, ipfsHash) {
+            console.log('Attempting to save IPFS hash to user_ipfs_mappings table...');
+            console.log('Wallet:', walletAddress, 'Hash:', ipfsHash);
+            
+            const { data, error } = await supabaseClient
+                .from('user_ipfs_mappings')
+                .upsert({
+                    wallet_address: walletAddress,
+                    ipfs_hash: ipfsHash,
+                    last_updated: new Date().toISOString()
+                }, {
+                    onConflict: 'wallet_address'
+                });
+            
+            if (error) {
+                console.error('Supabase error details:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                console.error('Error details:', error.details);
+                throw new Error(`Error saving IPFS hash to user_ipfs_mappings: ${error.message}`);
+            }
+            
+            console.log('Successfully saved IPFS hash:', data);
+        }
+
+        async function uploadToIPFS(data, walletAddress) {
+            const formData = new FormData();
+            const jsonBlob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            formData.append('file', jsonBlob, `user-nfts-${walletAddress}-${Date.now()}.json`);
+
+            const pinataMetadata = JSON.stringify({
+                name: `User NFT Collection - ${walletAddress}`,
+                keyvalues: { wallet: walletAddress, type: 'user_nft_collection' }
+            });
+            formData.append('pinataMetadata', pinataMetadata);
+
+            const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+                method: 'POST',
+                headers: {
+                    'pinata_api_key': PINATA_API_KEY,
+                    'pinata_secret_api_key': PINATA_SECRET_KEY
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Pinata upload failed: ${response.status} - ${errorBody}`);
+            }
+
+            const result = await response.json();
+            return result.IpfsHash;
+        }
+
+        async function fetchFromIPFS(hash) {
+            const response = await fetch(`${IPFS_GATEWAY}${hash}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch from IPFS: ${hash}`);
+            }
+            return response.json();
+        }
+
+        // Unique CID Distribution Functions
+        async function distributeUniqueNFT(walletAddress, rarity) {
+            const { data, error } = await supabaseClient.rpc('distribute_unique_nft', {
+                wallet_address: walletAddress.toLowerCase(),
+                target_rarity: rarity
+            });
+
+            if (error) {
+                throw new Error(`Database error: ${error.message}`);
+            }
+
+            return data;
+        }
+
+        async function checkCIDAvailability(rarity) {
+            const { data, error } = await supabaseClient.rpc('get_available_cid_counts');
+            
+            if (error) {
+                console.error('Error checking CID availability:', error);
+                return { available: false, count: 0 };
+            }
+
+            const rarityStats = data?.find(s => s.rarity === rarity);
+            return {
+                available: (rarityStats?.available_count || 0) > 0,
+                count: rarityStats?.available_count || 0
+            };
+        }
+
+        async function getCIDAvailabilityStats() {
+            const { data, error } = await supabaseClient.rpc('get_available_cid_counts');
+            
+            if (error) {
+                console.error('Error fetching CID stats:', error);
+                return [];
+            }
+
+            return data || [];
+        }
+
+        // Rarity-specific IPFS images
+        const rarityImages = {
+            'common': [
+                'https://gateway.pinata.cloud/ipfs/QmW37FWsy7pKnZqRyeMS1MAA2hDDxRRkgh1aEpPZCqmJga',
+                'https://gateway.pinata.cloud/ipfs/QmZHkTFU2LurmQLXEshuoSrbtpw2YFLu2MT2TweymaAKkH',
+                'https://gateway.pinata.cloud/ipfs/Qmax77GZCCXr939inoTgSmGex1YAr3EfeszY764YGajqtz'
+            ], // Common IPFS CIDs
+            'rare': [
+                'https://gateway.pinata.cloud/ipfs/QmcZ1Xexgc3HMXLrfcFz4PX3EVpg57hYe1Z3zZu27b47Lz',
+                'https://gateway.pinata.cloud/ipfs/QmaGMGwGTtPdvCa7aGZEwB2BMVvexuTGrn9qY1NYP85S2W',
+                'https://gateway.pinata.cloud/ipfs/QmccGgVGC8HPGrwkeK52tyDGEdPYzWPdg18i7ykoH4ZHVa'
+            ], // Rare IPFS CIDs
+            'legendary': ['https://gateway.pinata.cloud/ipfs/QmcGGmyLso5kzARCgHHsrdJWWueQCbbUo6d2WfQhkGizaC', 'https://gateway.pinata.cloud/ipfs/QmS2WB4D1z2rYkq36sF555ubTxZLMXoZjxYTbhfUgYFNEf'], // 11.jpg and 12.jpg - Legendary
+        };
+
+        async function executeDistribution() {
+            const walletAddress = document.getElementById('walletAddress').value;
+            const rarity = document.getElementById('rarity').value;
+            
+            if (!walletAddress) {
+                document.getElementById('status').innerHTML = '<p style="color: red;">Please enter a wallet address</p>';
+                return;
+            }
+
+            document.getElementById('status').innerHTML = '<p>Distributing unique NFT...</p>';
+
+            try {
+                // First check if unique CIDs are available for this rarity
+                const availabilityCheck = await checkCIDAvailability(rarity);
+                if (!availabilityCheck.available) {
+                    document.getElementById('status').innerHTML = `
+                        <p style="color: red;"> No unique ${rarity} NFTs available!</p>
+                        <p>Available count: ${availabilityCheck.count}</p>
+                    `;
+                    return;
+                }
+
+                // Distribute unique NFT using the new system
+                const distributionResult = await distributeUniqueNFT(walletAddress, rarity);
+                
+                if (!distributionResult.success) {
+                    document.getElementById('status').innerHTML = `
+                        <p style="color: red;">❌ Distribution failed: ${distributionResult.error}</p>
+                    `;
+                    return;
+                }
+
+                const nftData = distributionResult.nft_data;
+                
+                // Get current user NFTs and add the new unique NFT
+                const currentNFTs = await getUserNFTs(walletAddress);
+                const updatedNFTs = [...currentNFTs, nftData];
+                
+                // Upload updated collection to IPFS
+                const ipfsHash = await uploadToIPFS(updatedNFTs, walletAddress);
+                
+                // Save mapping to Supabase
+                await saveIPFSMapping(walletAddress, ipfsHash);
+
+                document.getElementById('status').innerHTML = `
+                    <p style="color: green;">✅ Unique NFT distributed successfully!</p>
+                    <p><strong>NFT ID:</strong> ${nftData.id}</p>
+                    <p><strong>Rarity:</strong> ${nftData.rarity}</p>
+                    <p><strong>Unique CID:</strong> ${nftData.cid}</p>
+                    <p><strong>Collection IPFS Hash:</strong> ${ipfsHash}</p>
+                    <p><strong>Image:</strong> <a href="${nftData.image}" target="_blank">View NFT</a></p>
+                `;
+            } catch (error) {
+                console.error('Distribution error:', error);
+                document.getElementById('status').innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function addNFTToUserCollection(walletAddress, nftData) {
+            const MAX_NFTS_PER_PAGE = 50; // Align with service
+            let ipfsIndexHash = await getIPFSHash(walletAddress);
+            let indexData;
+
+            // 1. Get or create the main index file
+            if (ipfsIndexHash) {
+                try {
+                    const fetchedData = await fetchFromIPFS(ipfsIndexHash);
+                    // Validate the structure expected by the service
+                    if (fetchedData && Array.isArray(fetchedData.pages)) {
+                        indexData = fetchedData;
+                    } else {
+                        console.warn('Invalid index structure found on IPFS, creating a new one.');
+                        indexData = { wallet_address: walletAddress, pages: [], version: 1 };
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch or parse index file, creating a new one.', e);
+                    indexData = { wallet_address: walletAddress, pages: [], version: 1 };
+                }
+            } else {
+                indexData = { wallet_address: walletAddress, pages: [], version: 1 };
+            }
+
+            let lastPageHash = indexData.pages.length > 0 ? indexData.pages[indexData.pages.length - 1] : null;
+            let pageData;
+
+            // 2. Get or create the NFT page file
+            if (lastPageHash) {
+                pageData = await fetchFromIPFS(lastPageHash);
+            } else {
+                pageData = { wallet_address: walletAddress, page_number: 1, nfts: [] };
+            }
+
+            // 3. Add NFT to page, creating a new page if the last one is full
+            if (pageData.nfts.length >= MAX_NFTS_PER_PAGE) {
+                const newPageNumber = (pageData.page_number || 1) + 1;
+                const newPageData = {
+                    wallet_address: walletAddress,
+                    page_number: newPageNumber,
+                    nfts: [nftData]
+                };
+                const newPageHash = await uploadToIPFS(newPageData, walletAddress);
+                indexData.pages.push(newPageHash);
+            } else {
+                pageData.nfts.push(nftData);
+                const updatedPageHash = await uploadToIPFS(pageData, walletAddress);
+                // Replace the last page hash or add it if it's the first page
+                if (lastPageHash) {
+                    indexData.pages[indexData.pages.length - 1] = updatedPageHash;
+                } else {
+                    indexData.pages.push(updatedPageHash);
+                }
+            }
+
+            // 4. Upload the updated index file and save its hash to Supabase
+            const newIndexHash = await uploadToIPFS(indexData, walletAddress);
+            await setIPFSHash(walletAddress, newIndexHash);
+            console.log('Successfully updated IPFS index:', newIndexHash);
+        }
+
+        async function checkUserNFTs() {
+            const userWallet = document.getElementById('userWallet').value;
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Checking NFTs...';
+
+            if (!userWallet) {
+                statusDiv.textContent = 'Please provide a wallet address.';
+                return;
+            }
+
+            try {
+                const ipfsHash = await getIPFSHash(userWallet);
+                if (!ipfsHash) {
+                    statusDiv.textContent = 'No NFT data found for this wallet.';
+                    return;
+                }
+
+                const indexData = await fetchFromIPFS(ipfsHash);
+                let allNfts = [];
+                for (const pageHash of indexData.pages) {
+                    const pageData = await fetchFromIPFS(pageHash);
+                    allNfts.push(...pageData.nfts);
+                }
+
+                statusDiv.textContent = `Found ${allNfts.length} NFTs:\n\n${JSON.stringify(allNfts, null, 2)}`;
+            } catch (error) {
+                console.error(error);
+                statusDiv.textContent = 'Error checking NFTs: ' + error.message;
+            }
+        }
+
+        async function testUniqueness() {
+            try {
+                document.getElementById('status').innerHTML = '<p>🧪 Testing uniqueness with 3 different users...</p>';
+                
+                const testUsers = [
+                    '0x5BEdd9F1415B8Eb1F669AAc68B0Fd9106b265071',
+                    '0x6f342509037b5876c845B7a14775622d534fbc03',
+                    'A1EumSThgbkhZY9z8y7LC8PdEG4BNmAWV2NrbUepNWLW'
+                ];
+                
+                const rarity = 'common'; // Test with common NFTs
+                const results = [];
+                
+                for (let i = 0; i < testUsers.length; i++) {
+                    const wallet = testUsers[i];
+                    try {
+                        const result = await distributeUniqueNFT(wallet, rarity);
+                        if (result.success) {
+                            results.push({
+                                user: `User ${i + 1}`,
+                                wallet: wallet.substring(0, 10) + '...',
+                                cid: result.nft_data.cid,
+                                nft_id: result.nft_data.id,
+                                image: result.nft_data.image
+                            });
+                        } else {
+                            results.push({
+                                user: `User ${i + 1}`,
+                                wallet: wallet.substring(0, 10) + '...',
+                                error: result.error
+                            });
+                        }
+                    } catch (error) {
+                        results.push({
+                            user: `User ${i + 1}`,
+                            wallet: wallet.substring(0, 10) + '...',
+                            error: error.message
+                        });
+                    }
+                    
+                    // Small delay between distributions
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                // Display results
+                let resultHTML = '<h3>🧪 Uniqueness Test Results</h3>';
+                resultHTML += '<table border="1" style="border-collapse: collapse; margin: 10px 0; width: 100%;">';
+                resultHTML += '<tr><th>User</th><th>Wallet</th><th>Unique CID</th><th>NFT ID</th><th>Status</th></tr>';
+                
+                const successfulResults = results.filter(r => !r.error);
+                const uniqueCIDs = new Set(successfulResults.map(r => r.cid));
+                
+                results.forEach(result => {
+                    if (result.error) {
+                        resultHTML += `
+                            <tr>
+                                <td style="padding: 8px;">${result.user}</td>
+                                <td style="padding: 8px;">${result.wallet}</td>
+                                <td style="padding: 8px; color: red;">Error</td>
+                                <td style="padding: 8px; color: red;">-</td>
+                                <td style="padding: 8px; color: red;">❌ ${result.error}</td>
+                            </tr>
+                        `;
+                    } else {
+                        resultHTML += `
+                            <tr>
+                                <td style="padding: 8px;">${result.user}</td>
+                                <td style="padding: 8px;">${result.wallet}</td>
+                                <td style="padding: 8px; font-family: monospace; font-size: 12px;">${result.cid.substring(0, 20)}...</td>
+                                <td style="padding: 8px; font-family: monospace; font-size: 12px;">${result.nft_id}</td>
+                                <td style="padding: 8px; color: green;">✅ Unique</td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                resultHTML += '</table>';
+                
+                // Add uniqueness verification
+                if (successfulResults.length > 0) {
+                    const allUnique = uniqueCIDs.size === successfulResults.length;
+                    resultHTML += `
+                        <div style="margin-top: 15px; padding: 15px; background: ${allUnique ? '#e8f5e8' : '#ffe8e8'}; border-radius: 5px; border: 2px solid ${allUnique ? '#4caf50' : '#f44336'};">
+                            <h4 style="margin: 0 0 10px 0;">${allUnique ? '✅ UNIQUENESS VERIFIED' : '❌ UNIQUENESS FAILED'}</h4>
+                            <strong>Results:</strong><br>
+                            📊 Successful Distributions: ${successfulResults.length}<br>
+                            🔑 Unique CIDs Generated: ${uniqueCIDs.size}<br>
+                            ${allUnique ? 
+                                '🎉 <strong>Each user received a different NFT with unique CID!</strong>' : 
+                                '⚠️ <strong>Duplicate CIDs detected - system needs review</strong>'
+                            }
+                        </div>
+                    `;
+                } else {
+                    resultHTML += `
+                        <div style="margin-top: 15px; padding: 15px; background: #ffe8e8; border-radius: 5px; border: 2px solid #f44336;">
+                            <h4 style="margin: 0;">❌ TEST FAILED</h4>
+                            <p>No successful distributions. Please check CID pools and database setup.</p>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('status').innerHTML = resultHTML;
+                
+            } catch (error) {
+                console.error('Error testing uniqueness:', error);
+                document.getElementById('status').innerHTML = `<p style="color: red;">❌ Error testing uniqueness: ${error.message}</p>`;
+            }
+        }
+
+    </script>
+</body>
+</html>

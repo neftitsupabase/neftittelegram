@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual NFT Distribution Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { background: #2a2a2a; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #45a049; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        .result { background: #333; padding: 15px; margin: 10px 0; border-radius: 4px; white-space: pre-wrap; }
+        .success { border-left: 4px solid #4CAF50; }
+        .error { border-left: 4px solid #f44336; }
+        .info { border-left: 4px solid #2196F3; }
+        input { padding: 8px; margin: 5px; border: 1px solid #555; background: #333; color: #fff; border-radius: 4px; width: 300px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Manual NFT Distribution Test</h1>
+        
+        <div class="section">
+            <h2>Distribution Parameters</h2>
+            <div>
+                <label>Project ID:</label><br>
+                <input type="text" id="projectId" value="b5f6da7b-53b8-4bf7-9464-2def2bab609a" readonly>
+            </div>
+            <div>
+                <label>User Wallet:</label><br>
+                <input type="text" id="userWallet" value="0x5BEdd9F1415B8Eb1F669AAc68B0Fd9106b265071" readonly>
+            </div>
+            <div>
+                <label>Rarity:</label><br>
+                <input type="text" id="rarity" value="common" readonly>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Actions</h2>
+            <button onclick="previewDistribution()">1. Preview Distribution</button>
+            <button onclick="executeDistribution()" id="executeBtn">2. Execute Distribution</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="section">
+            <h2>Results</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the service with correct TypeScript extension
+        import { lowEgressManualNFTService } from './src/services/LowEgressManualNFTService.ts';
+        
+        window.lowEgressManualNFTService = lowEgressManualNFTService;
+        
+        window.previewDistribution = async function() {
+            const projectId = document.getElementById('projectId').value;
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                addResult('🔄 Previewing distribution...', 'info');
+                
+                const preview = await lowEgressManualNFTService.previewDistribution(projectId);
+                
+                const previewText = `✅ Preview Results:
+Project: ${preview.project.title}
+Collection: ${preview.project.collection_name}
+Completers: ${preview.completer_count}
+Total Tasks: ${preview.total_tasks}
+
+Distribution Preview:
+- Common: ${preview.distribution_preview.common}
+- Rare: ${preview.distribution_preview.rare}  
+- Legendary: ${preview.distribution_preview.legendary}
+- Total: ${preview.distribution_preview.total}
+
+Current NFT Images:
+- Common: ${preview.current_nft_images.common}
+- Rare: ${preview.current_nft_images.rare}
+- Legendary: ${preview.current_nft_images.legendary}`;
+                
+                addResult(previewText, 'success');
+                
+            } catch (error) {
+                addResult(`❌ Preview Error: ${error.message}`, 'error');
+            }
+        };
+        
+        window.executeDistribution = async function() {
+            const projectId = document.getElementById('projectId').value;
+            const userWallet = document.getElementById('userWallet').value;
+            const rarity = document.getElementById('rarity').value;
+            const executeBtn = document.getElementById('executeBtn');
+            
+            try {
+                executeBtn.disabled = true;
+                executeBtn.textContent = '🔄 Executing...';
+                
+                addResult('🚀 Starting manual NFT distribution...', 'info');
+                
+                // Create user-rarity assignment
+                const userRarityAssignments = [
+                    {
+                        wallet_address: userWallet,
+                        rarity: rarity
+                    }
+                ];
+                
+                addResult(`📋 Assignment: ${userWallet} -> ${rarity}`, 'info');
+                
+                // Execute distribution
+                const result = await lowEgressManualNFTService.executeManualRarityDistribution(
+                    projectId,
+                    userRarityAssignments
+                );
+                
+                if (result.success) {
+                    const successText = `🎉 DISTRIBUTION SUCCESS!
+
+Message: ${result.message}
+NFTs Distributed: ${result.distributed_nfts}
+
+Distribution Details:
+${result.distributions.map((dist, i) => `${i + 1}. Wallet: ${dist.wallet_address}
+   Rarity: ${dist.rarity}
+   NFT ID: ${dist.nft_id}
+   Image: ${dist.image}`).join('\n\n')}
+
+Distribution Stats:
+- Common: ${result.distribution_stats.common}
+- Rare: ${result.distribution_stats.rare}
+- Legendary: ${result.distribution_stats.legendary}
+- Total: ${result.distribution_stats.total}
+
+Project Info:
+- Title: ${result.project_info.title}
+- Collection: ${result.project_info.collection_name}
+
+✅ The user can now see their NFT in the burn page!`;
+                    
+                    addResult(successText, 'success');
+                } else {
+                    addResult(`❌ DISTRIBUTION FAILED: ${result.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`💥 Distribution Error: ${error.message}`, 'error');
+            } finally {
+                executeBtn.disabled = false;
+                executeBtn.textContent = '2. Execute Distribution';
+            }
+        };
+        
+        window.clearResults = function() {
+            document.getElementById('results').innerHTML = '';
+        };
+        
+        function addResult(text, type) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = text;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Initial load message
+        addResult('🔧 Manual NFT Distribution Tool Loaded\nReady to distribute NFTs!', 'info');
+    </script>
+</body>
+</html>

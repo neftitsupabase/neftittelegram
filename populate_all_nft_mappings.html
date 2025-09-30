@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Populate All NFT Mappings</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px 0; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .mapping-item { border: 1px solid #ccc; margin: 5px 0; padding: 10px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Populate All NFT CID Mappings</h1>
+    <p>This tool will scan all files in Pinata and populate user_ipfs_mappings with all NFT collection CIDs.</p>
+    
+    <button onclick="scanAndPopulateAllMappings()">Scan Pinata & Populate All Mappings</button>
+    <button onclick="viewCurrentMappings()">View Current Mappings</button>
+    <button onclick="clearAllMappings()">Clear All Mappings</button>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://heacehinqihfexxrbwdr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlYWNlaGlucWloZmV4eHJid2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMTMyMTMsImV4cCI6MjA2Njc4OTIxM30.9jBZljJ_uS1M2gX9u3Ao_7amPwGtI9myTrdK7cBK7-4';
+        const PINATA_API_KEY = '8ba2dcf332749804d589';
+        const PINATA_SECRET_KEY = '3d413242a71d1c07cd1a67c6b0956738ccea600c80398e83a4a68b1c20b72ac5';
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/';
+
+        async function scanAndPopulateAllMappings() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            statusDiv.innerHTML = '<div class="info">Scanning all files in Pinata...</div>';
+            resultsDiv.innerHTML = '';
+
+            try {
+                // Get all files from Pinata
+                const response = await fetch('https://api.pinata.cloud/data/pinList?status=pinned', {
+                    method: 'GET',
+                    headers: {
+                        'pinata_api_key': PINATA_API_KEY,
+                        'pinata_secret_api_key': PINATA_SECRET_KEY
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Pinata API failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                statusDiv.innerHTML = `<div class="info">Found ${data.rows.length} files in Pinata. Processing...</div>`;
+
+                const mappingsToCreate = [];
+                const processedFiles = [];
+
+                for (const file of data.rows) {
+                    try {
+                        // Try to fetch and analyze each file
+                        const contentResponse = await fetch(`${IPFS_GATEWAY}${file.ipfs_pin_hash}`);
+                        if (!contentResponse.ok) continue;
+
+                        const content = await contentResponse.json();
+                        
+                        // Check if this looks like a user NFT collection
+                        let walletAddress = null;
+                        
+                        // Method 1: Check metadata for wallet info
+                        if (file.metadata && file.metadata.keyvalues && file.metadata.keyvalues.wallet) {
+                            walletAddress = file.metadata.keyvalues.wallet;
+                        }
+                        
+                        // Method 2: Check file name for wallet pattern
+                        if (!walletAddress && file.metadata && file.metadata.name) {
+                            const walletMatch = file.metadata.name.match(/(0x[a-fA-F0-9]{40})/);
+                            if (walletMatch) {
+                                walletAddress = walletMatch[1];
+                            }
+                        }
+                        
+                        // Method 3: Check content for wallet_address field
+                        if (!walletAddress && content.wallet_address) {
+                            walletAddress = content.wallet_address;
+                        }
+                        
+                        // Method 4: Check if content has pages array (NFT collection structure)
+                        if (!walletAddress && content.pages && Array.isArray(content.pages)) {
+                            // This looks like an NFT index file, try to extract wallet from pages
+                            for (const pageHash of content.pages) {
+                                try {
+                                    const pageResponse = await fetch(`${IPFS_GATEWAY}${pageHash}`);
+                                    const pageContent = await pageResponse.json();
+                                    if (pageContent.wallet_address) {
+                                        walletAddress = pageContent.wallet_address;
+                                        break;
+                                    }
+                                } catch (e) {
+                                    // Continue to next page
+                                }
+                            }
+                        }
+
+                        if (walletAddress) {
+                            mappingsToCreate.push({
+                                wallet_address: walletAddress,
+                                ipfs_hash: file.ipfs_pin_hash,
+                                file_name: file.metadata?.name || 'Unknown',
+                                date_pinned: file.date_pinned
+                            });
+                        }
+
+                        processedFiles.push({
+                            hash: file.ipfs_pin_hash,
+                            name: file.metadata?.name || 'Unknown',
+                            wallet: walletAddress,
+                            size: file.size,
+                            date: file.date_pinned
+                        });
+
+                    } catch (error) {
+                        console.log(`Skipping file ${file.ipfs_pin_hash}: ${error.message}`);
+                    }
+                }
+
+                statusDiv.innerHTML = `<div class="info">Found ${mappingsToCreate.length} NFT collections. Saving to database...</div>`;
+
+                // Insert all mappings into Supabase
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const mapping of mappingsToCreate) {
+                    try {
+                        const { error } = await supabaseClient
+                            .from('user_ipfs_mappings')
+                            .upsert({
+                                wallet_address: mapping.wallet_address,
+                                ipfs_hash: mapping.ipfs_hash,
+                                last_updated: new Date().toISOString()
+                            }, {
+                                onConflict: 'wallet_address'
+                            });
+
+                        if (error) {
+                            console.error(`Error saving mapping for ${mapping.wallet_address}:`, error);
+                            errorCount++;
+                        } else {
+                            successCount++;
+                        }
+                    } catch (error) {
+                        console.error(`Error processing mapping for ${mapping.wallet_address}:`, error);
+                        errorCount++;
+                    }
+                }
+
+                // Display results
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Successfully processed ${successCount} NFT collections<br>
+                        ${errorCount > 0 ? `❌ ${errorCount} errors encountered` : ''}
+                    </div>
+                `;
+
+                // Show detailed results
+                resultsDiv.innerHTML = `
+                    <h3>Processing Results:</h3>
+                    <p><strong>Total files scanned:</strong> ${data.rows.length}</p>
+                    <p><strong>NFT collections found:</strong> ${mappingsToCreate.length}</p>
+                    <p><strong>Successfully saved:</strong> ${successCount}</p>
+                    ${errorCount > 0 ? `<p><strong>Errors:</strong> ${errorCount}</p>` : ''}
+                    
+                    <h4>NFT Collections Saved:</h4>
+                    ${mappingsToCreate.map(mapping => `
+                        <div class="mapping-item">
+                            <strong>Wallet:</strong> ${mapping.wallet_address}<br>
+                            <strong>IPFS Hash:</strong> ${mapping.ipfs_hash}<br>
+                            <strong>File:</strong> ${mapping.file_name}<br>
+                            <strong>Date:</strong> ${mapping.date_pinned}
+                        </div>
+                    `).join('')}
+                `;
+
+            } catch (error) {
+                console.error('Error scanning Pinata:', error);
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function viewCurrentMappings() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_ipfs_mappings')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                statusDiv.innerHTML = `<div class="success">Found ${data.length} mappings in database</div>`;
+                
+                resultsDiv.innerHTML = `
+                    <h3>Current Mappings:</h3>
+                    ${data.map(mapping => `
+                        <div class="mapping-item">
+                            <strong>Wallet:</strong> ${mapping.wallet_address}<br>
+                            <strong>IPFS Hash:</strong> ${mapping.ipfs_hash}<br>
+                            <strong>Last Updated:</strong> ${mapping.last_updated}<br>
+                            <strong>Created:</strong> ${mapping.created_at}
+                        </div>
+                    `).join('')}
+                `;
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function clearAllMappings() {
+            if (!confirm('Are you sure you want to clear all mappings? This cannot be undone.')) {
+                return;
+            }
+
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('user_ipfs_mappings')
+                    .delete()
+                    .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+                if (error) {
+                    throw error;
+                }
+
+                statusDiv.innerHTML = '<div class="success">All mappings cleared</div>';
+                document.getElementById('results').innerHTML = '';
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

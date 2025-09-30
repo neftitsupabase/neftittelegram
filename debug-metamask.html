@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MetaMask Debug Test</title>
+</head>
+<body>
+    <h1>MetaMask Debug Test</h1>
+    <button id="testBtn">Test MetaMask Connection</button>
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            console.log(message);
+            output.innerHTML += '<p>' + message + '</p>';
+        }
+
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            output.innerHTML = '';
+            
+            try {
+                // Check if MetaMask is available
+                log('1. Checking MetaMask availability...');
+                if (!window.ethereum) {
+                    log('❌ MetaMask not detected!');
+                    return;
+                }
+                log('✅ MetaMask detected');
+
+                // Check current accounts
+                log('2. Checking current accounts...');
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                log('Current accounts: ' + JSON.stringify(accounts));
+
+                // Request account access
+                log('3. Requesting account access...');
+                const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                log('✅ MetaMask opened! Accounts: ' + JSON.stringify(requestedAccounts));
+
+                // Check network
+                log('4. Checking network...');
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                log('Current chain ID: ' + chainId);
+                
+                // Polygon Amoy testnet is 0x13882
+                if (chainId !== '0x13882') {
+                    log('⚠️ Not on Polygon Amoy testnet. Current: ' + chainId);
+                } else {
+                    log('✅ On Polygon Amoy testnet');
+                }
+
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+                console.error('Full error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

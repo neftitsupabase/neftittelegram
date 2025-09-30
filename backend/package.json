@@ -1,0 +1,35 @@
+{
+  "name": "discord-verification-backend",
+  "version": "2.0.0",
+  "description": "Robust Discord verification service with auto-restart and perfect reliability",
+  "main": "discord-verification-service-robust.js",
+  "scripts": {
+    "start": "node discord-verification-service-robust.js",
+    "start:robust": "node discord-verification-service-robust.js",
+    "start:legacy": "node discord-verification-service.js",
+    "dev": "nodemon discord-verification-service-robust.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "discord",
+    "verification",
+    "express",
+    "api"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "discord-verification-backend": "file:",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
