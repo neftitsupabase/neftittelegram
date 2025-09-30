@@ -58,34 +58,39 @@ class EnhancedHybridBurnService {
   private async initializeWeb3(): Promise<void> {
     try {
       if (!window.ethereum) {
-        throw new Error('MetaMask not available');
+        console.log('MetaMask not available, using read-only mode');
+        return;
       }
       
       this.web3 = new Web3(window.ethereum);
       
-      // Get user account
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-      this.userAccount = accounts[0];
-      
-      if (!this.userAccount) {
-        throw new Error('No account connected');
+      // Get user account (if connected)
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        this.userAccount = accounts[0] || null;
+      } catch (error) {
+        console.log('No MetaMask account connected, using read-only mode');
+        this.userAccount = null;
       }
       
-      console.log('👤 Connected account:', this.userAccount.toLowerCase());
-      
-      // Verify chain ID
-      const chainId = await this.web3.eth.getChainId();
-      console.log('Connected to chain ID:', chainId);
-      
-      if (Number(chainId) !== NETWORK_CONFIG.CHAIN_ID) {
-        throw new Error(`Wrong network. Expected ${NETWORK_CONFIG.CHAIN_ID}, got ${chainId}`);
+      if (this.userAccount) {
+        console.log('👤 Connected account:', this.userAccount.toLowerCase());
+        
+        // Verify chain ID
+        const chainId = await this.web3.eth.getChainId();
+        console.log('Connected to chain ID:', chainId);
+        
+        if (Number(chainId) !== NETWORK_CONFIG.CHAIN_ID) {
+          throw new Error(`Wrong network. Expected ${NETWORK_CONFIG.CHAIN_ID}, got ${chainId}`);
+        }
       }
       
       console.log('✅ Web3 setup complete for burning');
       
     } catch (error) {
       console.error('❌ Failed to initialize Web3:', error);
-      throw error;
+      // Don't throw error, just log it and continue in read-only mode
+      console.log('Continuing in read-only mode...');
     }
   }
 
