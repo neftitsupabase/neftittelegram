@@ -1,8 +1,53 @@
 // Standalone Telegram authentication utility for edit profile page
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
+import TelegramBotService from "@/services/TelegramBotService";
 
 const TELEGRAM_BOT = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "neftit_bot";
+
+/**
+ * Wait for user confirmation via polling
+ */
+const waitForConfirmation = (userId: number): Promise<{ success: boolean; action?: string }> => {
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 30; // 30 seconds timeout
+    const pollInterval = 1000; // 1 second
+
+    const poll = () => {
+      attempts++;
+      
+      // Check if confirmation was received
+      const key = `telegram_approval_${userId}`;
+      const approvalData = localStorage.getItem(key);
+      
+      if (approvalData) {
+        try {
+          const data = JSON.parse(approvalData);
+          if (data.confirmed) {
+            resolve({ success: true, action: 'confirm' });
+            return;
+          } else if (data.declined) {
+            resolve({ success: false, action: 'decline' });
+            return;
+          }
+        } catch (error) {
+          console.error('Error parsing approval data:', error);
+        }
+      }
+
+      if (attempts >= maxAttempts) {
+        resolve({ success: false, action: 'timeout' });
+        return;
+      }
+
+      setTimeout(poll, pollInterval);
+    };
+
+    // Start polling
+    poll();
+  });
+};
 
 export const initiateTelegramAuth = async (): Promise<any> => {
   return new Promise((resolve, reject) => {
@@ -69,14 +114,45 @@ export const initiateTelegramAuth = async (): Promise<any> => {
       script.async = true;
 
       // Define the global handler for Telegram login
-      (window as any).onTelegramAuth = function (user: any) {
+      (window as any).onTelegramAuth = async function (user: any) {
         console.log('Telegram user data received:', user);
         
-        // Clean up the widget
-        document.body.removeChild(widgetContainer);
-        delete (window as any).onTelegramAuth;
-        
-        resolve(user);
+        try {
+          // Clean up the widget
+          document.body.removeChild(widgetContainer);
+          delete (window as any).onTelegramAuth;
+          
+          // Show loading message
+          const loadingDiv = document.createElement('div');
+          loadingDiv.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+              <h3 style="margin: 0 0 10px 0; color: #333;">Sending Approval Request</h3>
+              <p style="margin: 0; color: #666;">Please check your Telegram for a confirmation message...</p>
+            </div>
+          `;
+          widgetContainer.appendChild(loadingDiv);
+          
+          // Send approval message via bot
+          const authData = (window as any).Telegram?.WebApp?.initData || '';
+          const approvalMessage = await TelegramBotService.sendApprovalMessage(user, authData);
+          
+          if (approvalMessage) {
+            // Wait for user confirmation (polling approach)
+            const confirmation = await waitForConfirmation(user.id);
+            
+            if (confirmation.success) {
+              resolve(user);
+            } else {
+              reject(new Error('Login was declined or timed out'));
+            }
+          } else {
+            reject(new Error('Failed to send approval message'));
+          }
+          
+        } catch (error) {
+          console.error('Error in Telegram auth handler:', error);
+          reject(error);
+        }
       };
 
       // Add error handling
